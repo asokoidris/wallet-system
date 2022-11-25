@@ -5,8 +5,10 @@ const bodyParser = require('body-parser');
 const Logger = require('../config/logger');
 const morgan = require('morgan');
 
-
 const app = express();
+
+const userRoutes = require ('./user-Route')
+
 
 global.logger = Logger.createLogger({ label: 'WALLET-SYSTEM' });
 
@@ -21,6 +23,8 @@ app.use(
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(morgan('combined', { stream: logger.stream }));
+
+app.use('/user', userRoutes)
 
 app.get('/', (req, res) => {
   res.send('Hello World');

@@ -6,5 +6,6 @@ module.exports = {
   PRODUCTION_DB: process.env.PRODUCTION_DB,
   PORT: process.env.PORT,
   NODE_ENV: process.env.NODE_ENV,
+  JWTSECRET: process.env.JWTSECRET,
 
 };
