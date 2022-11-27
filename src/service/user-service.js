@@ -1,4 +1,6 @@
+const mongoose = require('mongoose')
 const UserModel = require('../models/user');
+const WalletModel = require('../models/wallet')
 const HelperFunctions = require('../utils/helper-functions');
 const { successResponse, errorResponse } = require('../utils/response');
 const jwt = require('jsonwebtoken');
@@ -15,34 +17,46 @@ class UserService {
    * @returns {object} - Returns an object
    * @memberof UserService
    */
+
+
   static async signup(data) {
-    console.log(3);
-    const { email, username, password } = data;
-    const user = await UserModel.findOne({ email: email.toLowerCase() });
+    let session
+    try {
+      const { email, username, password } = data;
+      const user = await UserModel.findOne({ email: email.toLowerCase() });
 
-    if (user)
+      if (user)
+        return {
+          statusCode: 409,
+          message: 'User already exists',
+        };
+      const hashedPassword = HelperFunctions.hashPassword(password);
+      session = await mongoose.startSession();
+      session.startTransaction();
+      // const opts = { session };
+
+      const newUser = await UserModel.create([{
+        email: email.toLowerCase(),
+        username: username.toLowerCase(),
+        password: hashedPassword
+      }])
+      const wallet = await WalletModel.create([{ userId: newUser.id }])
+      await session.commitTransaction();
+      session.endSession();
+      logger.info(`User created with email: ${email}`);
+      
       return {
-        statusCode: 409,
-        message: 'User already exists',
+        statusCode: 201,
+        message: 'User created successfully',
+        data: newUser
       };
-
-    const hashedPassword = HelperFunctions.hashPassword(password);
-    const newUser = await UserModel.create({
-      email: email.toLowerCase(),
-      username: username.toLowerCase(),
-      password: hashedPassword,
-    });
-
-    logger.info(`User created with email: ${email}`);
-    // remove password from the response
-    newUser.password = undefined;
-    return {
-      statusCode: 201,
-      message: 'User created successfully',
-      data: newUser,
-    };
+    }
+    catch (error) {
+      await session.abortTransaction();
+      session.endSession()
+      throw error
+    }
   }
-
   /**
    * @description - This method is used to login a user
    * @param {object} userData - The user data
@@ -50,7 +64,7 @@ class UserService {
    * @memberof UserService
    
    */
-   static async login(data) {
+  static async login(data) {
     const { email, password } = data;
     const user = await UserModel.findOne({ email });
 
